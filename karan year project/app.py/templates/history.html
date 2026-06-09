@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{{ title or "History" }} — Smart Notes</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0e0e11; --surface:#1a1a1f; --surface2:#1f1f25; --surface3:#252530;
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.13);
+  --accent:#e8341a; --accent2:#ff6b35; --accent-glow:rgba(232,52,26,.18);
+  --teal:#06d6a0; --blue:#4dc4e8; --gold:#ffd166; --purple:#a78bfa;
+  --success:#22c55e; --text:#f0f0f0; --muted:#8a8a9a; --faint:#4a4a5a;
+  --fd:'Barlow Condensed',sans-serif; --fb:'Barlow',sans-serif; --fu:'Inter',sans-serif;
+  --r:14px; --rs:8px; --tr:0.2s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:10px;}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;}
+.bc{font-family:var(--fu);font-size:.82rem;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.bc a{color:var(--muted);text-decoration:none;transition:var(--tr);}
+.bc a:hover{color:var(--text);}
+.bc .sep{color:var(--faint);}
+.bc .cur{color:var(--text);font-weight:600;}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.icon-btn{width:34px;height:34px;border-radius:var(--rs);background:var(--surface2);border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);font-size:.85rem;cursor:pointer;transition:var(--tr);text-decoration:none;}
+.icon-btn:hover{background:var(--surface3);color:var(--text);}
+
+/* ── PAGE ── */
+.page-body{padding:40px 40px 60px;flex:1;max-width:1100px;width:100%;}
+.page-lbl{font-family:var(--fu);font-size:.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.page-lbl::before{content:'';display:block;width:28px;height:2px;background:var(--accent);border-radius:2px;}
+.page-title{font-family:var(--fd);font-size:2.6rem;font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:10px;}
+.page-title span{color:var(--accent2);}
+.page-sub{font-family:var(--fu);font-size:.88rem;color:var(--muted);line-height:1.6;margin-bottom:28px;max-width:500px;}
+
+/* ── STATS ROW ── */
+.stats-row{display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap;}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px;font-family:var(--fu);}
+.stat-icon{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;font-size:.85rem;flex-shrink:0;}
+.si-red   {background:rgba(232,52,26,.15);color:var(--accent2);}
+.si-teal  {background:rgba(6,214,160,.10);color:var(--teal);}
+.si-gold  {background:rgba(255,209,102,.10);color:var(--gold);}
+.si-blue  {background:rgba(77,196,232,.10);color:var(--blue);}
+.stat-val{font-size:1.1rem;font-weight:800;color:var(--text);line-height:1;}
+.stat-lbl{font-size:.68rem;color:var(--muted);margin-top:1px;}
+
+/* ── CONTROLS BAR ── */
+.controls{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.search-box{flex:1;min-width:200px;display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:9px 14px;gap:8px;}
+.search-box i{color:var(--faint);font-size:.85rem;}
+.search-box input{flex:1;border:none;outline:none;background:transparent;font-family:var(--fu);font-size:.84rem;color:var(--text);}
+.search-box input::placeholder{color:var(--faint);}
+.filter-btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:9px 14px;font-family:var(--fu);font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;transition:var(--tr);white-space:nowrap;}
+.filter-btn:hover,.filter-btn.active{background:rgba(232,52,26,.1);color:var(--accent2);border-color:rgba(232,52,26,.3);}
+.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.sort-select{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:9px 12px;font-family:var(--fu);font-size:.78rem;color:var(--muted);cursor:pointer;outline:none;}
+.sort-select option{background:var(--surface2);}
+.clear-filters{display:none;align-items:center;gap:5px;background:rgba(232,52,26,.08);border:1px solid rgba(232,52,26,.2);border-radius:var(--rs);padding:9px 14px;font-family:var(--fu);font-size:.78rem;color:var(--accent2);cursor:pointer;transition:var(--tr);}
+.clear-filters:hover{background:rgba(232,52,26,.15);}
+
+/* ── PINNED SECTION ── */
+.pinned-section{margin-bottom:24px;display:none;}
+.section-label{font-family:var(--fu);font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.section-label::before{content:'';display:block;width:20px;height:2px;background:var(--gold);border-radius:2px;}
+
+/* ── HISTORY LIST ── */
+.history-list{display:flex;flex-direction:column;gap:10px;}
+
+/* ── HISTORY CARD ── */
+.h-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color var(--tr),transform var(--tr);cursor:pointer;}
+.h-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.h-card.pinned{border-color:rgba(255,209,102,.25);background:linear-gradient(135deg,var(--surface),#1a1a14);}
+.h-card.hidden{display:none;}
+
+/* Card header row */
+.h-card-head{display:flex;align-items:center;gap:12px;padding:14px 18px;}
+.h-action-badge{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-size:.75rem;flex-shrink:0;}
+.ab-upload {background:rgba(232,52,26,.15);color:var(--accent2);}
+.ab-summary{background:rgba(77,196,232,.15);color:var(--blue);}
+.ab-youtube{background:rgba(232,52,26,.15);color:var(--accent);}
+.h-card-title{font-family:var(--fu);font-size:.88rem;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.h-card-meta{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.h-card-time{font-family:var(--fu);font-size:.70rem;color:var(--faint);}
+.h-card-type{font-family:var(--fu);font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;}
+.type-upload {background:rgba(232,52,26,.12);color:var(--accent2);}
+.type-summary{background:rgba(77,196,232,.12);color:var(--blue);}
+.type-youtube{background:rgba(255,59,59,.12);color:#ff6060;}
+.pin-btn{width:28px;height:28px;border-radius:7px;background:none;border:1px solid transparent;display:grid;place-items:center;color:var(--faint);font-size:.8rem;cursor:pointer;transition:var(--tr);flex-shrink:0;}
+.pin-btn:hover{background:rgba(255,209,102,.1);color:var(--gold);border-color:rgba(255,209,102,.2);}
+.pin-btn.pinned{color:var(--gold);background:rgba(255,209,102,.1);border-color:rgba(255,209,102,.2);}
+.expand-btn{width:28px;height:28px;border-radius:7px;background:none;border:1px solid transparent;display:grid;place-items:center;color:var(--faint);font-size:.75rem;cursor:pointer;transition:var(--tr);flex-shrink:0;}
+.expand-btn:hover{background:var(--surface2);color:var(--text);}
+.expand-btn.open{transform:rotate(180deg);}
+
+/* Card body */
+.h-card-body{display:none;border-top:1px solid var(--border);padding:18px 18px 14px;}
+.h-card-body.open{display:block;}
+.accent-line{height:2px;background:linear-gradient(90deg,var(--accent),transparent);margin-bottom:16px;}
+
+/* Content sections */
+.sec-lbl{font-family:var(--fu);font-size:.60rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);margin-bottom:5px;margin-top:12px;}
+.sec-lbl:first-child{margin-top:0;}
+.sec-text{font-family:var(--fu);font-size:.83rem;line-height:1.75;color:#c5c5df;}
+.sec-list{padding-left:16px;margin:0;}
+.sec-list li{font-family:var(--fu);font-size:.83rem;line-height:1.7;color:#c5c5df;margin-bottom:3px;}
+.kw-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.kw-tag{background:rgba(255,107,53,.09);border:1px solid rgba(255,107,53,.18);color:var(--accent2);padding:3px 10px;border-radius:20px;font-family:var(--fu);font-size:.72rem;font-weight:500;}
+
+/* Answer boxes */
+.ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+.ans-box{border-radius:10px;padding:12px 14px;border:1px solid var(--border);}
+.ans-five{background:linear-gradient(135deg,#0b1a12,#091210);border-color:rgba(6,214,160,.14);}
+.ans-ten {background:linear-gradient(135deg,#0c0f1a,#090c14);border-color:rgba(77,196,232,.14);}
+.ans-lbl{font-family:var(--fu);font-size:.60rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.ans-five .ans-lbl{color:var(--teal);}
+.ans-ten  .ans-lbl{color:var(--blue);}
+.ans-text{font-family:var(--fu);font-size:.80rem;line-height:1.7;color:#a8a8c4;}
+
+/* Viva */
+.viva-list{display:flex;flex-direction:column;gap:5px;margin-top:4px;}
+.viva-item{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-family:var(--fu);font-size:.82rem;color:#c5c5df;}
+.viva-q{font-family:var(--fu);font-size:.65rem;font-weight:700;color:var(--gold);min-width:22px;}
+
+/* MCQ */
+.mcq-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:6px;}
+.mcq-q{font-family:var(--fu);font-size:.83rem;font-weight:600;margin-bottom:8px;}
+.mcq-opts{display:flex;flex-direction:column;gap:4px;}
+.mcq-opt{padding:6px 10px;border-radius:6px;font-family:var(--fu);font-size:.78rem;color:var(--muted);background:rgba(255,255,255,.02);border:1px solid transparent;}
+.mcq-opt.correct{background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.25);color:var(--teal);font-weight:600;}
+.mcq-opt.correct::before{content:'✓  ';}
+
+/* Card actions */
+.h-card-actions{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}
+.ca-btn{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-family:var(--fu);font-size:.72rem;font-weight:600;color:var(--muted);cursor:pointer;transition:var(--tr);}
+.ca-btn:hover{background:rgba(232,52,26,.1);color:var(--accent2);border-color:rgba(232,52,26,.3);}
+.ca-btn.danger:hover{background:rgba(220,53,69,.1);color:#ff6b6b;border-color:rgba(220,53,69,.3);}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;text-align:center;}
+.empty-icon{width:64px;height:64px;background:var(--surface2);border:1px solid var(--border);border-radius:18px;display:grid;place-items:center;font-size:1.6rem;color:var(--faint);}
+.empty-title{font-family:var(--fd);font-size:1.3rem;font-weight:800;color:var(--muted);}
+.empty-sub{font-family:var(--fu);font-size:.83rem;color:var(--faint);max-width:280px;}
+
+/* No results */
+#no-results{display:none;text-align:center;padding:48px 20px;font-family:var(--fu);font-size:.88rem;color:var(--faint);}
+
+/* Toast */
+.toast{position:fixed;bottom:28px;right:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-family:var(--fu);font-size:.80rem;color:var(--text);z-index:999;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;display:flex;align-items:center;gap:8px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast i{color:var(--teal);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.h-card{animation:fadeUp .35s ease both;}
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"><i class="bi bi-check-circle-fill"></i><span id="toast-msg">Done</span></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="bc">
+    <a href="/dashboard">Smart Notes</a>
+    <span class="sep">/</span>
+    <span class="cur">History</span>
+  </div>
+  <div class="tb-right">
+    <a href="/dashboard" class="icon-btn" title="Dashboard"><i class="bi bi-speedometer2"></i></a>
+    <div class="icon-btn"><i class="bi bi-bell"></i></div>
+  </div>
+</div>
+
+<!-- PAGE BODY -->
+<div class="page-body">
+  <div class="page-lbl">Activity Log</div>
+  <h1 class="page-title">Your <span>History</span>.</h1>
+  <p class="page-sub">Browse, search, filter and pin all your past AI summaries in one place.</p>
+
+  {% if history %}
+
+  <!-- STATS ROW -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-pill">
+      <div class="stat-icon si-red"><i class="bi bi-clock-history"></i></div>
+      <div><div class="stat-val" id="stat-total">{{ history|length }}</div><div class="stat-lbl">Total</div></div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-icon si-teal"><i class="bi bi-cloud-arrow-up"></i></div>
+      <div><div class="stat-val" id="stat-uploads">0</div><div class="stat-lbl">Uploads</div></div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-icon si-blue"><i class="bi bi-stars"></i></div>
+      <div><div class="stat-val" id="stat-summaries">0</div><div class="stat-lbl">Summaries</div></div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-icon si-gold"><i class="bi bi-pin-angle-fill"></i></div>
+      <div><div class="stat-val" id="stat-pinned">0</div><div class="stat-lbl">Pinned</div></div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input type="text" id="search-input" placeholder="Search by title, keyword, content…">
+    </div>
+    <button class="filter-btn active" data-filter="all"><i class="bi bi-grid-3x3-gap"></i> All</button>
+    <button class="filter-btn" data-filter="upload"><i class="bi bi-cloud-arrow-up"></i> Uploads</button>
+    <button class="filter-btn" data-filter="summary"><i class="bi bi-stars"></i> Summaries</button>
+    <button class="filter-btn" data-filter="youtube"><i class="bi bi-play-circle"></i> YouTube</button>
+    <button class="filter-btn" data-filter="pinned"><i class="bi bi-pin-angle-fill"></i> Pinned</button>
+    <select class="sort-select" id="sort-select">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="az">A → Z</option>
+      <option value="za">Z → A</option>
+    </select>
+    <button class="clear-filters" id="clear-filters"><i class="bi bi-x-circle"></i> Clear</button>
+  </div>
+
+  <!-- PINNED SECTION -->
+  <div class="pinned-section" id="pinned-section">
+    <div class="section-label">📌 Pinned Items</div>
+    <div class="history-list" id="pinned-list"></div>
+  </div>
+
+  <!-- MAIN LIST -->
+  <div class="history-list" id="history-list">
+    {% for item in history %}
+    {% set action_lower = item.action | lower %}
+    <div class="h-card"
+         data-index="{{ loop.index }}"
+         data-title="{{ (item.summary.title or item.filename or '') | lower }}"
+         data-action="{{ action_lower }}"
+         data-keywords="{{ (item.summary.important_keywords or []) | join(' ') | lower }}"
+         data-content="{{ ((item.summary.definition or '') ~ ' ' ~ (item.summary.explanation or '')) | lower }}"
+         data-timestamp="{{ item.timestamp }}">
+
+      <div class="h-card-head">
+        <!-- Action icon -->
+        {% if 'upload' in action_lower %}
+        <div class="h-action-badge ab-upload"><i class="bi bi-cloud-arrow-up"></i></div>
+        {% elif 'youtube' in action_lower %}
+        <div class="h-action-badge ab-youtube"><i class="bi bi-play-circle-fill"></i></div>
+        {% else %}
+        <div class="h-action-badge ab-summary"><i class="bi bi-stars"></i></div>
+        {% endif %}
+
+        <div class="h-card-title">{{ item.summary.title or item.filename or 'Untitled' }}</div>
+
+        <div class="h-card-meta">
+          <!-- Type badge -->
+          {% if 'upload' in action_lower %}
+          <span class="h-card-type type-upload">Upload</span>
+          {% elif 'youtube' in action_lower %}
+          <span class="h-card-type type-youtube">YouTube</span>
+          {% else %}
+          <span class="h-card-type type-summary">Summary</span>
+          {% endif %}
+
+          <span class="h-card-time">{{ item.timestamp }}</span>
+          <button class="pin-btn" data-idx="{{ loop.index }}" title="Pin this"><i class="bi bi-pin-angle"></i></button>
+          <button class="expand-btn" data-idx="{{ loop.index }}" title="Expand"><i class="bi bi-chevron-down"></i></button>
+        </div>
+      </div>
+
+      <!-- Expandable body -->
+      <div class="h-card-body" id="body-{{ loop.index }}">
+        <div class="accent-line"></div>
+
+        {% if item.summary.definition %}
+        <div class="sec-lbl">Definition</div>
+        <div class="sec-text">{{ item.summary.definition }}</div>
+        {% endif %}
+
+        {% if item.summary.explanation %}
+        <div class="sec-lbl">Explanation</div>
+        <div class="sec-text">{{ item.summary.explanation }}</div>
+        {% endif %}
+
+        {% if item.summary.bullet_points %}
+        <div class="sec-lbl">Key Points</div>
+        <ul class="sec-list">{% for p in item.summary.bullet_points %}<li>{{ p }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if item.summary.important_keywords %}
+        <div class="sec-lbl">Keywords</div>
+        <div class="kw-wrap">{% for kw in item.summary.important_keywords %}<span class="kw-tag">{{ kw }}</span>{% endfor %}</div>
+        {% endif %}
+
+        {% if item.summary.five_mark_answer or item.summary.ten_mark_answer %}
+        <div class="sec-lbl">Exam Answers</div>
+        <div class="ans-grid">
+          {% if item.summary.five_mark_answer %}
+          <div class="ans-box ans-five"><div class="ans-lbl">⭐ 5 Mark</div><div class="ans-text">{{ item.summary.five_mark_answer }}</div></div>
+          {% endif %}
+          {% if item.summary.ten_mark_answer %}
+          <div class="ans-box ans-ten"><div class="ans-lbl">⭐⭐ 10 Mark</div><div class="ans-text">{{ item.summary.ten_mark_answer }}</div></div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if item.summary.viva_questions %}
+        <div class="sec-lbl">Viva Questions</div>
+        <div class="viva-list">{% for q in item.summary.viva_questions %}<div class="viva-item"><span class="viva-q">Q{{ loop.index }}</span><span>{{ q }}</span></div>{% endfor %}</div>
+        {% endif %}
+
+        {% if item.summary.mcqs %}
+        <div class="sec-lbl">MCQ Quiz</div>
+        {% for mcq in item.summary.mcqs %}
+        <div class="mcq-item">
+          <div class="mcq-q">Q{{ loop.index }}. {{ mcq.question }}</div>
+          <div class="mcq-opts">
+            {% for opt in mcq.options %}
+            <div class="mcq-opt {% if opt == mcq.answer %}correct{% endif %}">{{ opt }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Card actions -->
+        <div class="h-card-actions">
+          <button class="ca-btn copy-btn" data-idx="{{ loop.index }}"><i class="bi bi-clipboard"></i> Copy</button>
+          <button class="ca-btn download-btn" data-idx="{{ loop.index }}"><i class="bi bi-download"></i> Download</button>
+          <button class="ca-btn share-btn" data-idx="{{ loop.index }}"><i class="bi bi-share"></i> Share</button>
+        </div>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="no-results">
+    <i class="bi bi-search" style="font-size:2rem;color:var(--faint);display:block;margin-bottom:10px;"></i>
+    No results found. Try a different search or filter.
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="bi bi-clock-history"></i></div>
+    <div class="empty-title">No history yet</div>
+    <div class="empty-sub">Your summaries and uploads will appear here once you start using Smart Notes.</div>
+  </div>
+  {% endif %}
+
+</div><!-- end page-body -->
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const cards = [...document.querySelectorAll('.h-card')];
+let pinnedSet = new Set(JSON.parse(localStorage.getItem('sn_pinned') || '[]'));
+let currentFilter = 'all';
+let currentSearch  = '';
+let currentSort    = 'newest';
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const uploads   = cards.filter(c => c.dataset.action.includes('upload')).length;
+  const summaries = cards.filter(c => !c.dataset.action.includes('upload') && !c.dataset.action.includes('youtube')).length;
+  document.getElementById('stat-uploads').textContent   = uploads;
+  document.getElementById('stat-summaries').textContent = summaries;
+  document.getElementById('stat-pinned').textContent    = pinnedSet.size;
+}
+
+// ── PIN ───────────────────────────────────────────────────────────────────────
+function savePins() { localStorage.setItem('sn_pinned', JSON.stringify([...pinnedSet])); }
+
+function applyPinUI() {
+  cards.forEach(card => {
+    const idx = card.dataset.index;
+    const btn = card.querySelector('.pin-btn');
+    if (pinnedSet.has(idx)) {
+      card.classList.add('pinned');
+      btn.classList.add('pinned');
+      btn.innerHTML = '<i class="bi bi-pin-fill"></i>';
+      btn.title = 'Unpin';
+    } else {
+      card.classList.remove('pinned');
+      btn.classList.remove('pinned');
+      btn.innerHTML = '<i class="bi bi-pin-angle"></i>';
+      btn.title = 'Pin';
+    }
+  });
+
+  // Render pinned section
+  const pinnedSection = document.getElementById('pinned-section');
+  const pinnedList    = document.getElementById('pinned-list');
+  pinnedList.innerHTML = '';
+
+  if (pinnedSet.size > 0 && currentFilter !== 'pinned') {
+    pinnedSection.style.display = 'block';
+    [...pinnedSet].forEach(idx => {
+      const orig = document.querySelector(`.h-card[data-index="${idx}"]`);
+      if (orig) {
+        const clone = orig.cloneNode(true);
+        clone.style.animation = 'none';
+        clone.querySelector('.pin-btn').addEventListener('click', e => {
+          e.stopPropagation(); togglePin(idx); renderAll();
+        });
+        clone.querySelector('.expand-btn').addEventListener('click', e => {
+          e.stopPropagation(); toggleExpand(clone);
+        });
+        attachCardActions(clone);
+        pinnedList.appendChild(clone);
+      }
+    });
+  } else {
+    pinnedSection.style.display = 'none';
+  }
+
+  updateStats();
+}
+
+function togglePin(idx) {
+  if (pinnedSet.has(idx)) { pinnedSet.delete(idx); showToast('Unpinned'); }
+  else { pinnedSet.add(idx); showToast('📌 Pinned!'); }
+  savePins();
+}
+
+// ── EXPAND ────────────────────────────────────────────────────────────────────
+function toggleExpand(card) {
+  const idx  = card.dataset.index;
+  const body = card.querySelector('.h-card-body');
+  const btn  = card.querySelector('.expand-btn');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  btn.classList.toggle('open', !isOpen);
+}
+
+// ── FILTER + SEARCH + SORT ────────────────────────────────────────────────────
+function renderAll() {
+  applyPinUI();
+  const q = currentSearch.toLowerCase();
+  let visible = 0;
+
+  // Sort cards array
+  const sorted = [...cards].sort((a, b) => {
+    if (currentSort === 'az') return a.dataset.title.localeCompare(b.dataset.title);
+    if (currentSort === 'za') return b.dataset.title.localeCompare(a.dataset.title);
+    if (currentSort === 'oldest') return a.dataset.timestamp.localeCompare(b.dataset.timestamp);
+    return b.dataset.timestamp.localeCompare(a.dataset.timestamp); // newest
+  });
+
+  // Re-order DOM
+  const list = document.getElementById('history-list');
+  sorted.forEach(c => list.appendChild(c));
+
+  cards.forEach(card => {
+    const action  = card.dataset.action;
+    const title   = card.dataset.title;
+    const kws     = card.dataset.keywords;
+    const content = card.dataset.content;
+    const isPinned = pinnedSet.has(card.dataset.index);
+
+    const matchFilter =
+      currentFilter === 'all'     ? true :
+      currentFilter === 'pinned'  ? isPinned :
+      currentFilter === 'upload'  ? action.includes('upload') :
+      currentFilter === 'youtube' ? action.includes('youtube') :
+      currentFilter === 'summary' ? (!action.includes('upload') && !action.includes('youtube')) : true;
+
+    const matchSearch = !q || title.includes(q) || kws.includes(q) || content.includes(q);
+
+    if (matchFilter && matchSearch) { card.classList.remove('hidden'); visible++; }
+    else card.classList.add('hidden');
+  });
+
+  document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+
+  // Show/hide clear button
+  const hasClear = currentFilter !== 'all' || currentSearch;
+  document.getElementById('clear-filters').style.display = hasClear ? 'flex' : 'none';
+}
+
+// ── COPY / DOWNLOAD / SHARE ───────────────────────────────────────────────────
+function getCardText(card) {
+  const body = card.querySelector('.h-card-body');
+  return body ? body.innerText.replace(/Copy|Download|Share/g,'').trim() : '';
+}
+
+function attachCardActions(card) {
+  card.querySelector('.copy-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(getCardText(card));
+    showToast('Copied to clipboard!');
+  });
+  card.querySelector('.download-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const title = card.dataset.title || 'summary';
+    const blob  = new Blob([getCardText(card)], { type: 'text/plain' });
+    const a     = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = title + '.txt'; a.click();
+    showToast('Downloaded!');
+  });
+  card.querySelector('.share-btn')?.addEventListener('click', async e => {
+    e.stopPropagation();
+    const text = getCardText(card);
+    if (navigator.share) { try { await navigator.share({ title: 'Smart Notes', text }); } catch(_){} }
+    else { await navigator.clipboard.writeText(text); showToast('Copied for sharing!'); }
+  });
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+// Restore pins
+applyPinUI();
+
+// Attach events to all cards
+cards.forEach(card => {
+  // Expand on header click
+  card.querySelector('.h-card-head').addEventListener('click', () => toggleExpand(card));
+
+  // Pin button
+  card.querySelector('.pin-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    togglePin(card.dataset.index);
+    renderAll();
+  });
+
+  // Expand button
+  card.querySelector('.expand-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleExpand(card);
+  });
+
+  attachCardActions(card);
+});
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderAll();
+  });
+});
+
+// Search
+document.getElementById('search-input').addEventListener('input', e => {
+  currentSearch = e.target.value.trim();
+  renderAll();
+});
+
+// Sort
+document.getElementById('sort-select').addEventListener('change', e => {
+  currentSort = e.target.value;
+  renderAll();
+});
+
+// Clear filters
+document.getElementById('clear-filters').addEventListener('click', () => {
+  currentFilter = 'all';
+  currentSearch = '';
+  document.getElementById('search-input').value = '';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-filter="all"]').classList.add('active');
+  renderAll();
+});
+
+// Stagger card animations
+cards.forEach((c, i) => c.style.animationDelay = (i * 0.04) + 's');
+
+renderAll();
+</script>
+</body>
+</html>

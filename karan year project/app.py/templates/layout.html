@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ title if title else "Smart Notes AI" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --red:      #ff2850;
+      --red-dim:  rgba(255,40,80,0.15);
+      --red-glow: rgba(255,40,80,0.35);
+      --violet:   rgba(120,60,255,0.12);
+      --glass:    rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.07);
+      --text:     #f0f0f0;
+      --muted:    rgba(255,255,255,0.38);
+      --sidebar-w: 248px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: #070b14;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ── AMBIENT ORBS ── */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 720px; height: 720px;
+      top: -220px; left: -180px;
+      background: radial-gradient(circle, rgba(255,40,80,0.16) 0%, transparent 65%);
+      animation: orb1 12s ease-in-out infinite;
+    }
+    body::after {
+      width: 640px; height: 640px;
+      bottom: -180px; right: -160px;
+      background: radial-gradient(circle, rgba(100,50,255,0.13) 0%, transparent 65%);
+      animation: orb2 15s ease-in-out infinite;
+    }
+    @keyframes orb1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(40px,30px) scale(1.12)} }
+    @keyframes orb2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-30px,-40px) scale(1.1)} }
+
+    /* ── LAYOUT ── */
+    .app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 28px 16px;
+      background: rgba(10,10,22,0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+      z-index: 100;
+    }
+
+    /* thin red glow line on right edge */
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      top: 15%; right: -1px; bottom: 15%;
+      width: 1px;
+      background: linear-gradient(180deg, transparent, var(--red-glow), transparent);
+    }
+
+    .brand {
+      font-family: 'Syne', sans-serif;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      margin-bottom: 36px;
+      padding: 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 10px var(--red-glow);
+      animation: pulse-dot 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.45;transform:scale(0.85)} }
+
+    .nav-section {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 10px;
+      margin: 16px 0 8px;
+    }
+
+    .nav-link {
+      color: rgba(255,255,255,0.55);
+      padding: 11px 14px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin-bottom: 4px;
+      transition: all 0.22s ease;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 400;
+      position: relative;
+    }
+    .nav-link i { font-size: 15px; flex-shrink: 0; }
+    .nav-link:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.06);
+    }
+    .nav-link.active {
+      color: #fff;
+      background: var(--red-dim);
+      border: 1px solid rgba(255,40,80,0.2);
+      font-weight: 500;
+    }
+    .nav-link.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 20%; bottom: 20%;
+      width: 3px;
+      border-radius: 3px;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red-glow);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 20px;
+      border-top: 1px solid var(--glass-border);
+    }
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      cursor: pointer;
+      transition: background 0.2s;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .user-chip:hover { background: rgba(255,255,255,0.08); }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--red-dim);
+      border: 1px solid rgba(255,40,80,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: var(--red); flex-shrink: 0;
+    }
+    .user-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .user-chip .bi-chevron-expand { color: var(--muted); font-size: 12px; }
+
+    /* ── MAIN ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      height: 60px;
+      position: sticky; top: 0;
+      z-index: 50;
+      background: rgba(7,11,20,0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 36px;
+    }
+
+    .topbar-left {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.03em;
+    }
+    .topbar-left span { color: #fff; }
+
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    .topbar-btn {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s;
+      font-size: 15px;
+    }
+    .topbar-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+    .dropdown-menu {
+      background: rgba(12,14,26,0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 6px;
+      min-width: 180px;
+    }
+    .dropdown-item {
+      color: rgba(255,255,255,0.7);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 13px;
+    }
+    .dropdown-item:hover { background: var(--glass); color: #fff; }
+    .dropdown-divider { border-color: var(--glass-border); margin: 4px 0; }
+
+    /* ── CONTENT ── */
+    .content {
+      flex: 1;
+      padding: 40px 36px;
+    }
+
+    /* ── GLASS CARD (for child pages) ── */
+    .glass-card {
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 28px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,40,80,0.4), transparent);
+    }
+    .glass-card:hover {
+      border-color: rgba(255,40,80,0.2);
+      transform: translateY(-2px);
+    }
+
+    /* ── NEO BUTTON ── */
+    .neo-btn {
+      background: linear-gradient(135deg, #ff2850, #ff6b35);
+      border: none;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .neo-btn:hover { opacity: 0.85; transform: scale(0.98); }
+    .neo-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── ICON CIRCLE ── */
+    .icon-circle {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--red-dim);
+      border: 1px solid rgba(255,40,80,0.25);
+      margin: auto;
+      font-size: 24px;
+    }
+
+    /* ── VOICE MODAL ── */
+    .modal-content {
+      background: rgba(10,12,24,0.96) !important;
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--glass-border) !important;
+      border-radius: 20px !important;
+      color: #fff;
+    }
+    .modal-header { border-bottom: 1px solid var(--glass-border) !important; padding: 20px 24px 16px; }
+    .modal-body { padding: 20px 24px 28px; }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; }
+
+    .modal textarea {
+      background: rgba(255,255,255,0.05) !important;
+      border: 1px solid var(--glass-border) !important;
+      border-radius: 12px !important;
+      color: #fff !important;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .modal textarea:focus { border-color: rgba(255,40,80,0.4) !important; }
+    .modal textarea::placeholder { color: var(--muted); }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,40,80,0.25); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,40,80,0.45); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .content { padding: 24px 20px; }
+      .topbar { padding: 0 20px; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <div class="brand">
+      <div class="brand-dot"></div>
+      Smart Notes
+    </div>
+
+    <div class="nav-section">Main</div>
+
+    <a href="/dashboard" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">
+      <i class="bi bi-grid-1x2"></i> Dashboard
+    </a>
+    <a href="/summary" class="nav-link {% if request.path == '/summary' %}active{% endif %}">
+      <i class="bi bi-stars"></i> AI Summary
+    </a>
+    <a href="/youtube" class="nav-link {% if request.path == '/youtube' %}active{% endif %}">
+      <i class="bi bi-play-circle"></i> YouTube AI
+    </a>
+    <a href="/upload" class="nav-link {% if request.path == '/upload' %}active{% endif %}">
+      <i class="bi bi-cloud-upload"></i> Upload Notes
+    </a>
+
+    <div class="nav-section">Tools</div>
+      <a href="/planner" class="nav-link {% if request.path == '/planner' %}active{% endif %}">
+      <i class="bi bi-calendar2-check"></i> Planner
+    </a>
+
+    <a href="#" id="voiceFeature" class="nav-link">
+      <i class="bi bi-mic"></i> Voice Mode
+    </a>
+    <a href="/history" class="nav-link {% if request.path == '/history' %}active{% endif %}">
+      <i class="bi bi-clock-history"></i> History
+    </a>
+
+    <div class="sidebar-footer">
+      <div class="dropdown">
+        <div class="user-chip dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar"><i class="bi bi-person-fill"></i></div>
+          <span class="user-name">{{ session.get('user', 'Student') }}</span>
+          <i class="bi bi-chevron-expand"></i>
+        </div>
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+          <li>
+            <a class="dropdown-item" href="#">
+              <i class="bi bi-gear me-2"></i> Settings
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item text-danger" href="/logout">
+              <i class="bi bi-box-arrow-right me-2"></i> Logout
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        Smart Notes / <span>{{ title if title else "Dashboard" }}</span>
+      </div>
+      <div class="topbar-right">
+       
+        <div class="topbar-btn" title="Notifications"><i class="bi bi-bell"></i></div>
+        <!-- Mobile menu toggle -->
+        <div class="topbar-btn d-md-none" id="sidebarToggle"><i class="bi bi-list"></i></div>
+      </div>
+    </div>
+
+    <!-- PAGE CONTENT -->
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+</div>
+
+<!-- ── VOICE MODAL ── -->
+<div class="modal fade" id="voiceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">🎧 Voice Assistant</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-4">
+          <div class="icon-circle mb-3">🎧</div>
+          <p style="color:var(--muted);font-size:14px;line-height:1.6;">
+            Paste your notes or summary below and convert them into an audio lesson for on-the-go learning.
+          </p>
+        </div>
+        <textarea id="modalVoiceText" rows="5" class="form-control mb-3"
+          placeholder="Paste notes or summary here..."></textarea>
+        <button class="neo-btn w-100" id="modalVoiceBtn">
+          <i class="bi bi-soundwave me-2"></i>Start Audio Conversion
+        </button>
+        <audio id="modalVoicePlayer" controls class="w-100 mt-3" style="display:none;border-radius:10px;"></audio>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // Voice modal trigger
+  document.getElementById("voiceFeature").addEventListener("click", function(e) {
+    e.preventDefault();
+    new bootstrap.Modal(document.getElementById('voiceModal')).show();
+  });
+
+  // Voice conversion
+  document.getElementById("modalVoiceBtn").addEventListener("click", function() {
+    const btn = this;
+    const text = document.getElementById("modalVoiceText").value.trim();
+    if (!text || text.length < 5) { alert("Please enter more text to convert."); return; }
+
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+    btn.disabled = true;
+
+    fetch("/text-to-speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "text=" + encodeURIComponent(text)
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.innerHTML = '<i class="bi bi-soundwave me-2"></i>Start Audio Conversion';
+      btn.disabled = false;
+      if (data.audio_url) {
+        const player = document.getElementById("modalVoicePlayer");
+        player.src = data.audio_url;
+        player.style.display = "block";
+        player.play();
+      } else {
+        alert("Error: " + (data.error || "Unknown error"));
+      }
+    })
+    .catch(() => {
+      btn.innerHTML = '<i class="bi bi-soundwave me-2"></i>Start Audio Conversion';
+      btn.disabled = false;
+      alert("Error connecting to server.");
+    });
+  });
+
+  // Mobile sidebar toggle
+  const sidebarToggle = document.getElementById("sidebarToggle");
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener("click", () => {
+      document.querySelector(".sidebar").classList.toggle("open");
+    });
+  }
+</script>
+<!-- ══ SMART NOTES FOOTER — 3D ANIMATED ══
+     Drop this inside your layout.html just before </body>
+     Three.js is loaded inline — no extra dependencies needed.
+     ═══════════════════════════════════════════════════════ -->
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+  .sn-footer {
+    position: relative;
+    margin-top: 80px;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+    z-index: 10;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* Three.js canvas lives inside the footer */
+  #footerCanvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 0; pointer-events: none;
+  }
+
+  /* top gradient glow line */
+  .sn-footer::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, #e8384f 30%, #f97316 70%, transparent);
+    z-index: 2;
+  }
+
+  .footer-inner {
+    position: relative; z-index: 3;
+    max-width: 1100px; margin: 0 auto;
+    padding: 56px 32px 36px;
+  }
+
+  /* ── TOP GRID ── */
+  .footer-top {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 44px;
+    margin-bottom: 48px;
+  }
+
+  /* BRAND */
+  .footer-logo {
+    display: flex; align-items: center; gap: 11px;
+    margin-bottom: 18px;
+  }
+  .footer-logo-mark {
+    width: 38px; height: 38px;
+    background: linear-gradient(110deg, #e8384f, #f97316);
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 22px rgba(232,56,79,0.5), 0 0 60px rgba(232,56,79,0.15);
+    flex-shrink: 0;
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+  @keyframes logoPulse {
+    0%,100%{ box-shadow: 0 0 22px rgba(232,56,79,0.5), 0 0 60px rgba(232,56,79,0.15); }
+    50%    { box-shadow: 0 0 30px rgba(249,115,22,0.6), 0 0 80px rgba(249,115,22,0.2); }
+  }
+  .footer-logo-mark svg { width: 19px; height: 19px; }
+  .footer-logo-name {
+    font-family: 'Bebas Neue', sans-serif; font-size: 23px; letter-spacing: 2.5px;
+    background: linear-gradient(110deg, #e8384f, #f97316);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(232,56,79,0.35));
+  }
+
+  .footer-tagline {
+    font-size: 13px; color: rgba(255,255,255,0.32);
+    line-height: 1.7; max-width: 240px; margin-bottom: 22px;
+  }
+
+  .footer-socials { display: flex; gap: 9px; }
+  .social-btn {
+    width: 35px; height: 35px; border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.4); font-size: 14px;
+    text-decoration: none;
+    transition: all 0.22s; cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .social-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(232,56,79,0.2), rgba(249,115,22,0.15));
+    opacity: 0; transition: opacity 0.22s;
+  }
+  .social-btn:hover {
+    border-color: rgba(232,56,79,0.4);
+    color: #fff; transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(232,56,79,0.25);
+  }
+  .social-btn:hover::before { opacity: 1; }
+
+  /* COLUMNS */
+  .footer-col-title {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: rgba(255,255,255,0.2); margin-bottom: 18px;
+  }
+  .footer-links { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .footer-links a {
+    font-size: 13.5px; color: rgba(255,255,255,0.42);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 8px;
+    transition: color 0.2s, transform 0.2s;
+  }
+  .footer-links a:hover { color: #fff; transform: translateX(4px); }
+  .link-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: linear-gradient(135deg, #e8384f, #f97316);
+    flex-shrink: 0; opacity: 0; transition: opacity 0.2s;
+    box-shadow: 0 0 6px rgba(232,56,79,0.6);
+  }
+  .footer-links a:hover .link-dot { opacity: 1; }
+
+  /* ── BANNER ── */
+  .footer-banner {
+    background: rgba(232,56,79,0.06);
+    border: 1px solid rgba(232,56,79,0.14);
+    border-radius: 18px; padding: 22px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; margin-bottom: 40px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    transform-style: preserve-3d;
+    cursor: default;
+  }
+  .footer-banner:hover {
+    border-color: rgba(232,56,79,0.28);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 30px rgba(232,56,79,0.08);
+  }
+  .footer-banner::before {
+    content: ''; position: absolute; top:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg,transparent,rgba(232,56,79,0.5),transparent);
+  }
+  .footer-banner::after {
+    content: ''; position: absolute; top:-40px; right:-40px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,0.08), transparent 70%);
+    pointer-events: none; animation: bannerOrb 5s ease-in-out infinite alternate;
+  }
+  @keyframes bannerOrb { to { transform: scale(1.4) translate(-10px, 10px); } }
+
+  .banner-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 5px; }
+  .banner-sub { font-size: 12.5px; color: rgba(255,255,255,0.35); }
+  .banner-btn {
+    padding: 11px 22px; border-radius: 11px;
+    background: linear-gradient(110deg, #e8384f, #f97316);
+    border: none; color: #fff;
+    font-size: 13px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; white-space: nowrap;
+    text-decoration: none; display: inline-block;
+    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 18px rgba(232,56,79,0.38);
+    position: relative; z-index: 1;
+  }
+  .banner-btn:hover { opacity: 0.88; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(232,56,79,0.48); }
+
+  /* ── BOTTOM ── */
+  .footer-bottom {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+    padding-top: 26px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .footer-copy { font-size: 12px; color: rgba(255,255,255,0.2); display: flex; align-items: center; gap: 6px; }
+  .heart { color: #e8384f; animation: heartbeat 2s ease-in-out infinite; display: inline-block; }
+  @keyframes heartbeat {
+    0%,100%{transform:scale(1);} 14%{transform:scale(1.3);} 28%{transform:scale(1);} 42%{transform:scale(1.2);} 56%{transform:scale(1);}
+  }
+  .footer-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .footer-badge {
+    padding: 5px 12px; border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    font-size: 11px; color: rgba(255,255,255,0.28);
+    display: flex; align-items: center; gap: 6px;
+    transition: border-color 0.2s;
+  }
+  .footer-badge:hover { border-color: rgba(232,56,79,0.25); color: rgba(255,255,255,0.5); }
+  .badge-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #22c55e; box-shadow: 0 0 7px rgba(34,197,94,0.7);
+    animation: blink 2.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+
+  .footer-legal { display: flex; gap: 20px; }
+  .footer-legal a { font-size: 12px; color: rgba(255,255,255,0.2); text-decoration: none; transition: color 0.2s; }
+  .footer-legal a:hover { color: rgba(255,255,255,0.6); }
+
+  /* RESPONSIVE */
+  @media (max-width: 880px) {
+    .footer-top { grid-template-columns: 1fr 1fr; }
+    .footer-banner { flex-direction: column; align-items: flex-start; }
+  }
+  @media (max-width: 540px) {
+    .footer-top { grid-template-columns: 1fr; }
+    .footer-bottom { flex-direction: column; align-items: flex-start; }
+    .footer-inner { padding: 40px 20px 28px; }
+  }
+</style>
+
+<footer class="sn-footer">
+
+  <!-- THREE.JS CANVAS INSIDE FOOTER -->
+  <canvas id="footerCanvas"></canvas>
+
+  <div class="footer-inner">
+
+    <!-- TOP -->
+    <div class="footer-top">
+
+      <!-- BRAND -->
+      <div>
+        <div class="footer-logo">
+          <div class="footer-logo-mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 12h6M9 16h6M9 8h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <span class="footer-logo-name">Smart Notes</span>
+        </div>
+        <p class="footer-tagline">Your AI-powered study workspace. Summarize, plan, and learn smarter — 100% free.</p>
+        <div class="footer-socials">
+          <a class="social-btn" href="#" title="GitHub">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          </a>
+          <a class="social-btn" href="#" title="Twitter / X">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a class="social-btn" href="#" title="LinkedIn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a class="social-btn" href="#" title="Email">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- FEATURES -->
+      <div>
+        <div class="footer-col-title">Features</div>
+        <ul class="footer-links">
+          <li><a href="/summary"><span class="link-dot"></span>AI Summary</a></li>
+          <li><a href="/youtube"><span class="link-dot"></span>YouTube AI</a></li>
+          <li><a href="/upload"><span class="link-dot"></span>Upload Notes</a></li>
+          <li><a href="/planner"><span class="link-dot"></span>Smart Planner</a></li>
+          <li><a href="/history"><span class="link-dot"></span>History</a></li>
+        </ul>
+      </div>
+
+      <!-- TOOLS -->
+      <div>
+        <div class="footer-col-title">Tools</div>
+        <ul class="footer-links">
+          <li><a href="#"><span class="link-dot"></span>Voice Mode</a></li>
+          <li><a href="#"><span class="link-dot"></span>MCQ Generator</a></li>
+          <li><a href="#"><span class="link-dot"></span>Viva Questions</a></li>
+          <li><a href="#"><span class="link-dot"></span>Study Planner</a></li>
+          <li><a href="#"><span class="link-dot"></span>Text to Speech</a></li>
+        </ul>
+      </div>
+
+      <!-- ACCOUNT -->
+      <div>
+        <div class="footer-col-title">Account</div>
+        <ul class="footer-links">
+          <li><a href="/dashboard"><span class="link-dot"></span>Dashboard</a></li>
+          <li><a href="/login"><span class="link-dot"></span>Sign In</a></li>
+          <li><a href="/login"><span class="link-dot"></span>Create Account</a></li>
+          <li><a href="/logout"><span class="link-dot"></span>Logout</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- BANNER -->
+    <div class="footer-banner" id="footerBanner">
+      <div>
+        <div class="banner-title">🚀 Start studying smarter today</div>
+        <div class="banner-sub">Join students using Smart Notes to ace their exams with AI.</div>
+      </div>
+      <a href="/login" class="banner-btn">Get Started Free →</a>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="footer-bottom">
+      <div class="footer-copy">
+        © 2026 Smart Notes. Made with <span class="heart">♥</span> for students.
+      </div>
+      <div class="footer-badges">
+        <div class="footer-badge"><span class="badge-dot"></span> All systems operational</div>
+        <div class="footer-badge">⚡ Powered by Groq AI</div>
+        <div class="footer-badge">🔒 100% Free</div>
+      </div>
+      <div class="footer-legal">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+<!-- THREE.JS (only load if not already loaded by dashboard) -->
+<script>
+(function() {
+  function initFooter3D() {
+    var THREE = window.THREE;
+    if (!THREE) return;
+
+    var canvas   = document.getElementById('footerCanvas');
+    var footer   = canvas.parentElement;
+    var w = footer.offsetWidth, h = footer.offsetHeight;
+
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(w, h);
+    renderer.setClearColor(0x06050d, 1);
+
+    var scene  = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 500);
+    camera.position.z = 22;
+
+    /* PARTICLES */
+    var N = 1200;
+    var pos = new Float32Array(N * 3);
+    var col = new Float32Array(N * 3);
+    var c1 = new THREE.Color(0xe8384f), c2 = new THREE.Color(0xf97316), c3 = new THREE.Color(0x4a4060);
+    for (var i = 0; i < N; i++) {
+      pos[i*3]   = (Math.random()-0.5) * 100;
+      pos[i*3+1] = (Math.random()-0.5) * 40;
+      pos[i*3+2] = (Math.random()-0.5) * 30;
+      var t = Math.random(), c = t<0.25?c1:t<0.5?c2:c3;
+      col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    geo.setAttribute('color',    new THREE.BufferAttribute(col,3));
+    var mat = new THREE.PointsMaterial({
+      size: 0.38, vertexColors: true, transparent: true, opacity: 0.7,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+    });
+    var pts = new THREE.Points(geo, mat);
+    scene.add(pts);
+
+    /* FLOATING SHAPES */
+    function mkIco(r,x,y,z,c,o,w2) {
+      var g=new THREE.IcosahedronGeometry(r,0);
+      var m=new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:o,wireframe:w2});
+      var mesh=new THREE.Mesh(g,m); mesh.position.set(x,y,z); scene.add(mesh); return mesh;
+    }
+    function mkTor(r,t,x,y,z,c,o) {
+      var g=new THREE.TorusGeometry(r,t,14,60);
+      var m=new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:o});
+      var mesh=new THREE.Mesh(g,m); mesh.position.set(x,y,z); scene.add(mesh); return mesh;
+    }
+    function mkOct(r,x,y,z,c,o) {
+      var g=new THREE.OctahedronGeometry(r,0);
+      var m=new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:o,wireframe:true});
+      var mesh=new THREE.Mesh(g,m); mesh.position.set(x,y,z); scene.add(mesh); return mesh;
+    }
+
+    var s1 = mkIco(3.5, -30, 6, -10, 0xe8384f, 0.09, false);
+    var s2 = mkIco(2.5,  28,-5,  -8, 0xf97316, 0.08, false);
+    var s3 = mkIco(3,   -22,-6,  -5, 0xe8384f, 0.16, true);
+    var s4 = mkIco(2,    25, 8,  -4, 0xf97316, 0.14, true);
+    var t1 = mkTor(8, 0.3,   0, 0, -16, 0xe8384f, 0.05);
+    var t2 = mkTor(4, 0.25,-20, 4, -10, 0xf97316, 0.07);
+    var o1 = mkOct(4,   18,-8,  -8, 0xe8384f, 0.12);
+
+    /* LIGHTS */
+    scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+    var pl1=new THREE.PointLight(0xe8384f,2,50); pl1.position.set(-15,8,8); scene.add(pl1);
+    var pl2=new THREE.PointLight(0xf97316,1.8,45); pl2.position.set(15,-6,8); scene.add(pl2);
+
+    /* MOUSE relative to footer */
+    var mx = 0, my = 0;
+    footer.addEventListener('mousemove', function(e) {
+      var r = footer.getBoundingClientRect();
+      mx = ((e.clientX - r.left) / r.width  - 0.5) * 2;
+      my = ((e.clientY - r.top)  / r.height - 0.5) * 2;
+    });
+
+    /* RESIZE */
+    window.addEventListener('resize', function() {
+      var nw = footer.offsetWidth, nh = footer.offsetHeight;
+      camera.aspect = nw / nh;
+      camera.updateProjectionMatrix();
+      renderer.setSize(nw, nh);
+    });
+
+    /* ANIMATE */
+    var clock = new THREE.Clock();
+    (function animate() {
+      requestAnimationFrame(animate);
+      var t = clock.getElapsedTime();
+
+      pts.rotation.y = t * 0.015;
+      pts.rotation.x = t * 0.007;
+
+      s1.rotation.x=t*0.3; s1.rotation.y=t*0.25; s1.position.y=6+Math.sin(t*0.4)*1.5;
+      s2.rotation.y=-t*0.28; s2.rotation.z=t*0.2; s2.position.y=-5+Math.cos(t*0.35)*1.2;
+      s3.rotation.x=t*0.45; s3.rotation.y=t*0.35; s3.position.y=-6+Math.sin(t*0.5)*1.8;
+      s4.rotation.x=-t*0.38; s4.rotation.z=t*0.28; s4.position.y=8+Math.cos(t*0.42)*1.3;
+      t1.rotation.x=t*0.12; t1.rotation.z=t*0.08;
+      t2.rotation.y=t*0.25; t2.position.y=4+Math.sin(t*0.3)*1.2;
+      o1.rotation.x=t*0.22; o1.rotation.y=t*0.3; o1.position.y=-8+Math.cos(t*0.38)*1.6;
+
+      pl1.position.x = -15 + Math.sin(t*0.5)*4;
+      pl2.position.x =  15 + Math.cos(t*0.4)*3;
+
+      camera.position.x += (mx * 3 - camera.position.x) * 0.04;
+      camera.position.y += (-my * 2 - camera.position.y) * 0.04;
+      camera.lookAt(scene.position);
+
+      renderer.render(scene, camera);
+    })();
+  }
+
+  /* Wait for Three.js — either already loaded or load it */
+  if (window.THREE) {
+    initFooter3D();
+  } else {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.onload = initFooter3D;
+    document.head.appendChild(s);
+  }
+})();
+
+/* ── BANNER 3D TILT ── */
+(function() {
+  var banner = document.getElementById('footerBanner');
+  if (!banner) return;
+  banner.addEventListener('mousemove', function(e) {
+    var r = banner.getBoundingClientRect();
+    var dx = (e.clientX - r.left - r.width/2)  / (r.width/2);
+    var dy = (e.clientY - r.top  - r.height/2) / (r.height/2);
+    banner.style.transform = 'rotateX('+(-dy*6)+'deg) rotateY('+(dx*8)+'deg) translateZ(8px)';
+  });
+  banner.addEventListener('mouseleave', function() {
+    banner.style.transition = 'transform 0.5s cubic-bezier(0.16,1,0.3,1)';
+    banner.style.transform = 'rotateX(0) rotateY(0) translateZ(0)';
+    setTimeout(function(){ banner.style.transition = ''; }, 500);
+  });
+  banner.style.transformStyle = 'preserve-3d';
+})();
+</script>
+</body>
+</html>

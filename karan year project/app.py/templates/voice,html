@@ -1,0 +1,39 @@
+<script>
+document.getElementById("ttsForm").onsubmit = async function(e) {
+    e.preventDefault();
+    const text = this.text.value.trim();
+
+    if (!text) {
+        alert("Please enter some text.");
+        return;
+    }
+
+    const btn = this.querySelector("button");
+    btn.disabled = true;
+    btn.textContent = "Generating...";
+
+    try {
+        const res = await fetch("/text-to-speech", {
+            method: "POST",
+            body: new URLSearchParams({ text })
+        });
+
+        const data = await res.json();
+
+        if (data.audio_url) {
+            const audio = document.getElementById("audioPlayer");
+            audio.src = data.audio_url;
+            audio.style.display = "block";
+            audio.play();
+        } else {
+            alert("Error: " + (data.error || "Unknown error"));
+        }
+    } catch (err) {
+        alert("Error connecting to server.");
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate Voice";
+    }
+};
+</script>

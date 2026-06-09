@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ title or "YouTube AI Summary" }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #1c1c28;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.11);
+      --red: #ff3b3b;
+      --accent: #ff6b35;
+      --gold: #ffd166;
+      --teal: #06d6a0;
+      --blue: #4dc4e8;
+      --purple: #a78bfa;
+      --text: #f0f0f5;
+      --muted: #7a7a9a;
+      --muted2: #45455a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+    .glow { position: fixed; border-radius: 50%; filter: blur(130px); pointer-events: none; z-index: 0; }
+    .glow-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(255,59,59,0.1), transparent 70%); top: -120px; right: -80px; }
+    .glow-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(6,214,160,0.06), transparent 70%); bottom: 80px; left: -80px; }
+    .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 100px; position: relative; z-index: 1; }
+
+    /* HEADER */
+    .header { display: flex; align-items: center; gap: 14px; margin-bottom: 44px; animation: fadeDown 0.5s ease both; }
+    .logo { width: 42px; height: 42px; background: var(--red); border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 24px rgba(255,59,59,0.35); flex-shrink: 0; }
+    .header h1 { font-family: 'Syne', sans-serif; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.5px; }
+    .header h1 span { color: var(--red); }
+
+    
+    /* INPUT */
+    .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 24px 26px; margin-bottom: 28px; animation: fadeUp 0.5s ease 0.05s both; }
+    .input-label { font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .input-row { display: flex; gap: 10px; }
+    .url-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.93rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .url-input::placeholder { color: var(--muted2); }
+    .url-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255,59,59,0.1); }
+    .submit-btn { background: var(--red); color: #fff; border: none; border-radius: 10px; padding: 13px 24px; font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 4px 18px rgba(255,59,59,0.28); white-space: nowrap; }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(255,59,59,0.4); }
+
+    /* MESSAGE */
+    .msg { background: rgba(255,59,59,0.07); border: 1px solid rgba(255,59,59,0.2); border-radius: 10px; padding: 14px 18px; color: #ff8080; font-size: 0.88rem; margin-bottom: 24px; display: flex; gap: 9px; align-items: center; animation: fadeUp 0.4s ease both; }
+
+    /* SUMMARY WRAP */
+    .summary-wrap { display: flex; flex-direction: column; gap: 16px; }
+    .summary-wrap > * { animation: fadeUp 0.5s ease both; }
+    .summary-wrap > *:nth-child(1) { animation-delay: 0.04s; }
+    .summary-wrap > *:nth-child(2) { animation-delay: 0.08s; }
+    .summary-wrap > *:nth-child(3) { animation-delay: 0.13s; }
+    .summary-wrap > *:nth-child(4) { animation-delay: 0.18s; }
+    .summary-wrap > *:nth-child(5) { animation-delay: 0.23s; }
+    .summary-wrap > *:nth-child(6) { animation-delay: 0.28s; }
+    .summary-wrap > *:nth-child(7) { animation-delay: 0.33s; }
+    .summary-wrap > *:nth-child(8) { animation-delay: 0.38s; }
+    .summary-wrap > *:nth-child(9) { animation-delay: 0.43s; }
+
+    /* CARD */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 24px 26px; transition: border-color 0.2s; }
+    .card:hover { border-color: var(--border2); }
+    .sec-label { display: inline-flex; align-items: center; gap: 6px; font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 4px 11px; border-radius: 20px; margin-bottom: 14px; }
+
+    /* TITLE CARD */
+    .title-card { background: linear-gradient(135deg, #160c0c, #110c18); border-color: rgba(255,59,59,0.18); position: relative; overflow: hidden; }
+    .title-card::after { content: '▶'; position: absolute; right: 22px; top: 50%; transform: translateY(-50%); font-size: 6rem; color: rgba(255,59,59,0.04); line-height: 1; }
+    .title-card .sec-label { background: rgba(255,59,59,0.1); color: var(--red); border: 1px solid rgba(255,59,59,0.18); }
+    .video-title { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; line-height: 1.35; letter-spacing: -0.4px; max-width: 88%; }
+
+    /* SUMMARY OVERVIEW */
+    .overview-card .sec-label { background: rgba(77,196,232,0.1); color: var(--blue); border: 1px solid rgba(77,196,232,0.18); }
+    .overview-text { font-size: 0.97rem; line-height: 1.88; color: #c5c5df; }
+
+    /* KEY INSIGHTS */
+    .insights-card .sec-label { background: rgba(6,214,160,0.09); color: var(--teal); border: 1px solid rgba(6,214,160,0.18); }
+    .insight-list { display: flex; flex-direction: column; gap: 9px; }
+    .insight-item { display: flex; gap: 13px; align-items: flex-start; padding: 12px 15px; background: var(--surface2); border: 1px solid var(--border); border-radius: 11px; font-size: 0.92rem; line-height: 1.65; color: #c5c5df; transition: border-color 0.2s, transform 0.2s; }
+    .insight-item:hover { border-color: rgba(6,214,160,0.22); transform: translateX(4px); }
+    .insight-dot { width: 7px; height: 7px; background: var(--teal); border-radius: 50%; margin-top: 7px; flex-shrink: 0; box-shadow: 0 0 8px rgba(6,214,160,0.5); }
+
+    /* DETAILED BREAKDOWN (roadmap style) */
+    .roadmap-card .sec-label { background: rgba(255,209,102,0.09); color: var(--gold); border: 1px solid rgba(255,209,102,0.18); }
+    .roadmap-list { display: flex; flex-direction: column; }
+    .roadmap-step { display: flex; gap: 16px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .roadmap-step:last-child { border-bottom: none; padding-bottom: 0; }
+    .roadmap-step:first-child { padding-top: 0; }
+    .step-num { width: 30px; height: 30px; background: rgba(255,209,102,0.1); border: 1px solid rgba(255,209,102,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 800; color: var(--gold); flex-shrink: 0; margin-top: 1px; }
+    .step-desc { font-size: 0.9rem; line-height: 1.7; color: #b8b8d4; }
+
+    /* DEFINITION */
+    .def-card .sec-label { background: rgba(167,139,250,0.09); color: var(--purple); border: 1px solid rgba(167,139,250,0.18); }
+    .def-text { font-size: 1rem; line-height: 1.78; color: #c5c5df; border-left: 3px solid var(--purple); padding-left: 16px; font-style: italic; }
+
+    /* KEYWORDS */
+    .kw-card .sec-label { background: rgba(255,107,53,0.09); color: var(--accent); border: 1px solid rgba(255,107,53,0.18); }
+    .kw-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .kw-tag { background: rgba(255,107,53,0.09); border: 1px solid rgba(255,107,53,0.18); color: var(--accent); padding: 6px 13px; border-radius: 20px; font-size: 0.81rem; font-weight: 500; cursor: default; transition: background 0.2s, transform 0.15s; }
+    .kw-tag:hover { background: rgba(255,107,53,0.18); transform: translateY(-2px); }
+
+    /* ANSWERS */
+    .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .answers-grid { grid-template-columns: 1fr; } }
+    .ans-card { border-radius: 14px; padding: 20px 22px; border: 1px solid var(--border); }
+    .ans-card.five { background: linear-gradient(135deg, #0b1a12, #091210); border-color: rgba(6,214,160,0.14); }
+    .ans-card.ten  { background: linear-gradient(135deg, #0c0f1a, #090c14); border-color: rgba(77,196,232,0.14); }
+    .ans-label { font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+    .ans-card.five .ans-label { color: var(--teal); }
+    .ans-card.ten  .ans-label { color: var(--blue); }
+    .ans-text { font-size: 0.88rem; line-height: 1.75; color: #a8a8c4; }
+
+    /* VIVA */
+    .viva-card .sec-label { background: rgba(255,209,102,0.09); color: var(--gold); border: 1px solid rgba(255,209,102,0.18); }
+    .viva-list { display: flex; flex-direction: column; gap: 8px; }
+    .viva-item { display: flex; gap: 13px; align-items: center; padding: 11px 15px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; font-size: 0.91rem; color: #c5c5df; transition: border-color 0.2s; }
+    .viva-item:hover { border-color: rgba(255,209,102,0.22); }
+    .viva-q { font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 800; color: var(--gold); min-width: 28px; }
+
+    /* MCQ */
+    .mcq-card .sec-label { background: rgba(255,59,59,0.07); color: var(--red); border: 1px solid rgba(255,59,59,0.18); }
+    .mcq-list { display: flex; flex-direction: column; gap: 14px; }
+    .mcq-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 13px; padding: 18px 20px; }
+    .mcq-q { font-family: 'Syne', sans-serif; font-size: 0.93rem; font-weight: 700; margin-bottom: 13px; }
+    .mcq-opts { display: flex; flex-direction: column; gap: 7px; }
+    .mcq-opt { padding: 9px 14px; border-radius: 8px; font-size: 0.87rem; color: #9090b0; background: rgba(255,255,255,0.025); border: 1px solid transparent; transition: all 0.18s; }
+    .mcq-opt.correct { background: rgba(6,214,160,0.1); border-color: rgba(6,214,160,0.28); color: var(--teal); font-weight: 600; }
+    .mcq-opt.correct::before { content: '✓  '; font-weight: 800; }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 64px 20px; animation: fadeUp 0.5s ease 0.2s both; }
+    .empty-icon { font-size: 3.5rem; margin-bottom: 14px; display: block; }
+    .empty h2 { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+    .empty p { color: var(--muted2); font-size: 0.88rem; }
+
+    /* LOADING */
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,15,0.88); backdrop-filter: blur(10px); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
+    .loading-overlay.active { display: flex; }
+    .spinner { width: 44px; height: 44px; border: 3px solid rgba(255,59,59,0.15); border-top-color: var(--red); border-radius: 50%; animation: spin 0.75s linear infinite; }
+    .loading-txt { font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); }
+
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(18px);  } to { opacity:1; transform:translateY(0); } }
+    @keyframes spin     { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+ 
+ <!-- Topbar -->
+  <div class="topbar">
+    <div class="bc">
+      <a href="/dashboard">Smart Notes</a>
+      <span class="sep">/</span>
+      <span class="cur">Upload Notes</span>
+    </div>
+    <div class="tb-actions">
+      <a href="/dashboard" class="icon-btn"><i class="bi bi-speedometer2"></i></a>
+      <div class="icon-btn"><i class="bi bi-bell"></i></div>
+    </div>
+  </div>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div class="loading-overlay" id="loader">
+  <div class="spinner"></div>
+  <div class="loading-txt">Analyzing Video…</div>
+</div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="logo">▶</div>
+    <h1>YouTube <span>AI</span> Summarizer</h1>
+  </div>
+
+  <div class="input-card">
+    <div class="input-label">🔗 Paste YouTube URL</div>
+    <form method="POST" action="/youtube" onsubmit="document.getElementById('loader').classList.add('active')">
+      <div class="input-row">
+        <input type="text" name="youtube_url" class="url-input"
+          placeholder="https://www.youtube.com/watch?v=..."
+          value="{{ request.form.get('youtube_url', '') }}" autocomplete="off"/>
+        <button type="submit" class="submit-btn">⚡ Summarize</button>
+      </div>
+    </form>
+  </div>
+
+
+  {% if message %}
+  <div class="msg"><span>⚠️</span><span>{{ message }}</span></div>
+  {% endif %}
+
+  {% if summary %}
+  <div class="summary-wrap">
+
+    <!-- 1. Title -->
+    <div class="card title-card">
+      <div class="sec-label">🎬 Video</div>
+      <div class="video-title">{{ summary.get('title', 'Untitled Video') }}</div>
+    </div>
+
+    <!-- 2. Summary overview -->
+    {% if summary.get('explanation') %}
+    <div class="card overview-card">
+      <div class="sec-label">📋 Summary</div>
+      <div class="overview-text">{{ summary.get('explanation') }}</div>
+    </div>
+    {% endif %}
+
+    <!-- 3. Key Insights -->
+    {% if summary.get('bullet_points') %}
+    <div class="card insights-card">
+      <div class="sec-label">💡 Key Insights</div>
+      <div class="insight-list">
+        {% for point in summary.get('bullet_points', []) %}
+        <div class="insight-item">
+          <span class="insight-dot"></span>
+          <span>{{ point }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. Detailed Breakdown (10 mark split into steps) -->
+    {% if summary.get('ten_mark_answer') %}
+    <div class="card roadmap-card">
+      <div class="sec-label">🗺️ Detailed Breakdown</div>
+      <div class="roadmap-list">
+        {% for step in summary.get('ten_mark_answer', '').split('. ') if step.strip() %}
+        <div class="roadmap-step">
+          <div class="step-num">{{ loop.index }}</div>
+          <div class="step-desc">{{ step.strip() }}{% if not step.strip().endswith('.') %}.{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 5. Definition -->
+    {% if summary.get('definition') %}
+    <div class="card def-card">
+      <div class="sec-label">📖 Definition</div>
+      <div class="def-text">{{ summary.get('definition') }}</div>
+    </div>
+    {% endif %}
+
+    <!-- 6. Keywords -->
+    {% if summary.get('important_keywords') %}
+    <div class="card kw-card">
+      <div class="sec-label">🏷️ Important Keywords</div>
+      <div class="kw-list">
+        {% for kw in summary.get('important_keywords', []) %}
+        <span class="kw-tag">{{ kw }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 7. 5 & 10 Mark Answers -->
+    {% if summary.get('five_mark_answer') or summary.get('ten_mark_answer') %}
+    <div class="answers-grid">
+      {% if summary.get('five_mark_answer') %}
+      <div class="ans-card five">
+        <div class="ans-label">⭐ 5 Mark Answer</div>
+        <div class="ans-text">{{ summary.get('five_mark_answer') }}</div>
+      </div>
+      {% endif %}
+      {% if summary.get('ten_mark_answer') %}
+      <div class="ans-card ten">
+        <div class="ans-label">⭐⭐ 10 Mark Answer</div>
+        <div class="ans-text">{{ summary.get('ten_mark_answer') }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 8. Viva Questions -->
+    {% if summary.get('viva_questions') %}
+    <div class="card viva-card">
+      <div class="sec-label">🎤 Viva Questions</div>
+      <div class="viva-list">
+        {% for q in summary.get('viva_questions', []) %}
+        <div class="viva-item">
+          <span class="viva-q">Q{{ loop.index }}</span>
+          <span>{{ q }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 9. MCQ Quiz -->
+    {% if summary.get('mcqs') %}
+    <div class="card mcq-card">
+      <div class="sec-label">🔘 MCQ Quiz</div>
+      <div class="mcq-list">
+        {% for mcq in summary.get('mcqs', []) %}
+        <div class="mcq-item">
+          <div class="mcq-q">Q{{ loop.index }}. {{ mcq.get('question', '') }}</div>
+          <div class="mcq-opts">
+            {% for opt in mcq.get('options', []) %}
+            <div class="mcq-opt {% if opt == mcq.get('answer') %}correct{% endif %}">{{ opt }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% else %}
+  <div class="empty">
+    <span class="empty-icon">🎬</span>
+    <h2>Ready to summarize</h2>
+    <p>Paste any YouTube URL above and hit Summarize</p>
+  </div>
+  {% endif %}
+
+ 
+
+</div>
+</body>
+</html>

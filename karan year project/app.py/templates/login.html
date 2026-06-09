@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Notes — Sign In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:    #e8384f;
+      --orange: #f97316;
+      --grad:   linear-gradient(110deg, #e8384f 0%, #f97316 100%);
+      --text:   #f0eeff;
+      --muted:  #7a7590;
+      --card:   rgba(18, 16, 28, 0.82);
+      --border: rgba(255,255,255,0.08);
+      --focus:  rgba(232,56,79,0.22);
+    }
+
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: #06050d; color: var(--text); overflow: hidden; }
+
+    /* ── THREE.JS CANVAS ── */
+    #bg { position: fixed; inset: 0; z-index: 0; }
+
+    /* ── PAGE ── */
+    .page {
+      position: relative; z-index: 2;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px 20px;
+      perspective: 1200px;
+    }
+
+    /* ── LOGO ── */
+    .top-logo {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 30px;
+      animation: floatIn 0.9s 0.1s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    .logo-mark {
+      width: 44px; height: 44px;
+      background: var(--grad); border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 32px rgba(232,56,79,0.55), 0 0 80px rgba(232,56,79,0.2);
+      animation: pulse3d 3s ease-in-out infinite;
+    }
+    .logo-mark svg { width: 22px; height: 22px; }
+    .logo-wordmark {
+      font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2.5px;
+      background: var(--grad); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+      filter: drop-shadow(0 0 12px rgba(232,56,79,0.4));
+    }
+
+    /* ── 3D CARD ── */
+    .card-wrap {
+      animation: floatIn 0.9s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+      transform-style: preserve-3d;
+    }
+    .card {
+      width: 100%; max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 38px 38px 34px;
+      position: relative; overflow: hidden;
+      backdrop-filter: blur(28px) saturate(1.4);
+      -webkit-backdrop-filter: blur(28px) saturate(1.4);
+      box-shadow:
+        0 2px 0 rgba(255,255,255,0.06) inset,
+        0 -1px 0 rgba(0,0,0,0.4) inset,
+        0 32px 80px rgba(0,0,0,0.7),
+        0 0 0 1px rgba(255,255,255,0.04),
+        0 0 60px rgba(232,56,79,0.08);
+      transform-style: preserve-3d;
+      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+      will-change: transform;
+    }
+    /* gradient top line */
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--grad);
+      box-shadow: 0 0 20px rgba(232,56,79,0.6);
+    }
+    /* inner glow */
+    .card::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at 50% 0%, rgba(232,56,79,0.06) 0%, transparent 60%);
+      border-radius: 24px;
+    }
+
+    /* ── TABS ── */
+    .auth-tabs {
+      display: flex;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px; gap: 4px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1; padding: 9px 16px;
+      border: none; border-radius: 999px;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 600;
+      color: var(--muted); cursor: pointer;
+      transition: all 0.25s;
+    }
+    .tab-btn.active {
+      background: var(--grad); color: #fff;
+      box-shadow: 0 2px 16px rgba(232,56,79,0.4);
+    }
+    .tab-btn:not(.active):hover { color: var(--text); }
+
+    /* ── FLASH ── */
+    .flash {
+      padding: 11px 15px; border-radius: 10px;
+      font-size: 13px; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 9px;
+    }
+    .flash.error   { background: rgba(232,56,79,0.10); border: 1px solid rgba(232,56,79,0.25); color: #ff7a8a; }
+    .flash.success { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); color: #6ee7a0; }
+    .flash svg { width:15px; height:15px; flex-shrink:0; }
+
+    /* ── SECTIONS ── */
+    .form-section { display: none; }
+    .form-section.active { display: block; }
+
+    .form-heading { margin-bottom: 22px; }
+    .form-heading h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 34px; letter-spacing: 1px; margin-bottom: 5px;
+      text-shadow: 0 0 30px rgba(232,56,79,0.3);
+    }
+    .form-heading p { font-size: 13px; color: var(--muted); }
+
+    /* ── FIELDS ── */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 7px;
+    }
+    .input-wrap { position: relative; }
+    .input-wrap input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 13px 44px 13px 42px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      backdrop-filter: blur(4px);
+    }
+    .input-wrap input:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--focus), 0 0 20px rgba(232,56,79,0.15);
+      background: rgba(232,56,79,0.04);
+    }
+    .input-wrap input::placeholder { color: var(--muted); }
+
+    .input-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); display: flex; pointer-events: none; transition: color 0.2s;
+    }
+    .input-wrap:focus-within .input-icon { color: var(--red); }
+    .input-icon svg { width: 15px; height: 15px; }
+
+    .toggle-pw {
+      position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); display: flex; align-items: center;
+      padding: 4px; border-radius: 4px; transition: color 0.2s;
+    }
+    .toggle-pw:hover { color: var(--text); }
+    .toggle-pw svg { width: 15px; height: 15px; }
+
+    .field-extras { display: flex; justify-content: flex-end; margin-top: 7px; }
+    .forgot-link {
+      font-size: 12px; color: var(--red); text-decoration: none;
+      font-weight: 600; transition: opacity 0.2s;
+    }
+    .forgot-link:hover { opacity: 0.7; }
+
+    /* strength */
+    .strength-bar { display: flex; gap: 4px; margin-top: 8px; }
+    .strength-seg { flex: 1; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.07); transition: background 0.3s; }
+    .strength-seg.weak   { background: #e8384f; }
+    .strength-seg.medium { background: #f97316; }
+    .strength-seg.strong { background: #22c55e; }
+    .strength-text { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+    /* ── BUTTON ── */
+    .btn-submit {
+      width: 100%; margin-top: 8px; padding: 14px;
+      background: var(--grad);
+      border: none; border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 700;
+      color: white; cursor: pointer;
+      position: relative; overflow: hidden;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 24px rgba(232,56,79,0.4), 0 0 0 1px rgba(232,56,79,0.2);
+    }
+    .btn-submit::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.12), transparent);
+      pointer-events: none;
+    }
+    .btn-submit:hover { opacity: 0.92; transform: translateY(-2px); box-shadow: 0 10px 32px rgba(232,56,79,0.5), 0 0 0 1px rgba(232,56,79,0.3); }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-label { display: block; transition: opacity 0.2s; }
+    .btn-loader { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+    .btn-submit.loading .btn-label { opacity: 0; }
+    .btn-submit.loading .btn-loader { display: flex; }
+    .spin { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.65s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── SWITCH ── */
+    .switch-mode { text-align: center; margin-top: 20px; font-size: 13px; color: var(--muted); }
+    .switch-mode a { color: var(--red); font-weight: 700; text-decoration: none; }
+    .switch-mode a:hover { opacity: 0.75; }
+
+    /* ── FOOTER ── */
+    .page-footer { margin-top: 26px; font-size: 12px; color: rgba(255,255,255,0.2); animation: floatIn 0.6s 0.5s both; }
+
+    /* ── ANIMATIONS ── */
+    @keyframes floatIn { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes pulse3d {
+      0%, 100% { box-shadow: 0 0 28px rgba(232,56,79,0.55), 0 0 60px rgba(232,56,79,0.18); }
+      50%       { box-shadow: 0 0 40px rgba(249,115,22,0.65), 0 0 90px rgba(249,115,22,0.22); }
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 28px 20px 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- THREE.JS CANVAS -->
+<canvas id="bg"></canvas>
+
+<div class="page">
+
+  <div class="top-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 12h6M9 16h6M9 8h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <span class="logo-wordmark">Smart Notes</span>
+  </div>
+
+  <div class="card-wrap" id="cardWrap">
+    <div class="card" id="card3d">
+
+      <div class="auth-tabs">
+        <button class="tab-btn active" id="tabLogin">Sign In</button>
+        <button class="tab-btn" id="tabRegister">Create Account</button>
+      </div>
+
+      <!-- FLASK FLASH MESSAGES -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">
+              {% if category == 'error' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 13.01 9 10.01"/></svg>
+              {% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- SIGN IN -->
+      <div class="form-section active" id="sectionLogin">
+        <div class="form-heading">
+          <h2>Welcome Back</h2>
+          <p>Sign in to your Smart Notes account</p>
+        </div>
+        <form id="formLogin" method="POST" action="/login">
+          <div class="field">
+            <label>Username</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input type="text" name="username" placeholder="Enter your username" required autocomplete="username"/>
+            </div>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+              <input type="password" id="loginPw" name="password" placeholder="Enter your password" required autocomplete="current-password"/>
+              <button type="button" class="toggle-pw" data-target="loginPw">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="field-extras"><a href="/forgot-password" class="forgot-link">Forgot password?</a></div>
+          </div>
+          <button type="submit" class="btn-submit" id="btnLogin">
+            <span class="btn-label">Sign In</span>
+            <span class="btn-loader"><span class="spin"></span></span>
+          </button>
+        </form>
+        <div class="switch-mode">Don't have an account? <a href="#" id="linkToRegister">Create one free</a></div>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="form-section" id="sectionRegister">
+        <div class="form-heading">
+          <h2>Get Started</h2>
+          <p>Create your free Smart Notes account</p>
+        </div>
+        <form id="formRegister" method="POST" action="/register">
+          <div class="field">
+            <label>Username</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input type="text" name="username" placeholder="Choose a username" required autocomplete="username"/>
+            </div>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+              <input type="password" id="regPw" name="password" placeholder="Create a strong password" required autocomplete="new-password"/>
+              <button type="button" class="toggle-pw" data-target="regPw">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="strength-bar">
+              <div class="strength-seg" id="seg1"></div><div class="strength-seg" id="seg2"></div>
+              <div class="strength-seg" id="seg3"></div><div class="strength-seg" id="seg4"></div>
+            </div>
+            <div class="strength-text" id="strengthText"></div>
+          </div>
+          <div class="field">
+            <label>Confirm Password</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+              <input type="password" id="regPw2" name="confirm_password" placeholder="Repeat your password" required autocomplete="new-password"/>
+              <button type="button" class="toggle-pw" data-target="regPw2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="strength-text" id="matchText"></div>
+          </div>
+          <button type="submit" class="btn-submit" id="btnRegister">
+            <span class="btn-label">Create Account</span>
+            <span class="btn-loader"><span class="spin"></span></span>
+          </button>
+        </form>
+        <div class="switch-mode">Already have an account? <a href="#" id="linkToLogin">Sign in</a></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="page-footer">© 2026 Smart Notes · Built for students</div>
+</div>
+
+<!-- THREE.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ══════════════════════════════════════
+//  THREE.JS 3D BACKGROUND
+// ══════════════════════════════════════
+(function() {
+  var canvas = document.getElementById('bg');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x06050d, 1);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.z = 30;
+
+  // ── PARTICLE FIELD ──
+  var particleCount = 1800;
+  var positions = new Float32Array(particleCount * 3);
+  var colors    = new Float32Array(particleCount * 3);
+  var sizes     = new Float32Array(particleCount);
+
+  var c1 = new THREE.Color(0xe8384f);
+  var c2 = new THREE.Color(0xf97316);
+  var c3 = new THREE.Color(0x6b6880);
+
+  for (var i = 0; i < particleCount; i++) {
+    positions[i*3]   = (Math.random() - 0.5) * 120;
+    positions[i*3+1] = (Math.random() - 0.5) * 80;
+    positions[i*3+2] = (Math.random() - 0.5) * 60;
+
+    var t = Math.random();
+    var col = t < 0.3 ? c1 : t < 0.55 ? c2 : c3;
+    colors[i*3]   = col.r;
+    colors[i*3+1] = col.g;
+    colors[i*3+2] = col.b;
+
+    sizes[i] = Math.random() * 2.5 + 0.5;
+  }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('size',     new THREE.BufferAttribute(sizes, 1));
+
+  var mat = new THREE.PointsMaterial({
+    size: 0.5,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.7,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  var particles = new THREE.Points(geo, mat);
+  scene.add(particles);
+
+  // ── FLOATING GEOMETRIC SHAPES ──
+  function makeSphere(r, x, y, z, col, op) {
+    var g = new THREE.SphereGeometry(r, 32, 32);
+    var m = new THREE.MeshPhongMaterial({ color: col, transparent: true, opacity: op, wireframe: false });
+    var mesh = new THREE.Mesh(g, m);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    return mesh;
+  }
+
+  function makeIco(r, x, y, z, col, op) {
+    var g = new THREE.IcosahedronGeometry(r, 0);
+    var m = new THREE.MeshPhongMaterial({ color: col, transparent: true, opacity: op, wireframe: true });
+    var mesh = new THREE.Mesh(g, m);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    return mesh;
+  }
+
+  function makeTorus(r, t, x, y, z, col, op) {
+    var g = new THREE.TorusGeometry(r, t, 16, 80);
+    var m = new THREE.MeshPhongMaterial({ color: col, transparent: true, opacity: op });
+    var mesh = new THREE.Mesh(g, m);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    return mesh;
+  }
+
+  var sphere1 = makeSphere(6,  -22,  10, -15, 0xe8384f, 0.08);
+  var sphere2 = makeSphere(4,   22, -8,  -10, 0xf97316, 0.07);
+  var ico1    = makeIco(5,     -18, -12, -8,  0xe8384f, 0.18);
+  var ico2    = makeIco(3,      20,  14, -5,  0xf97316, 0.15);
+  var torus1  = makeTorus(10, 0.4,  0,   0, -20, 0xe8384f, 0.06);
+  var torus2  = makeTorus(6,  0.3, -25,  8, -12, 0xf97316, 0.08);
+
+  // ── LIGHTS ──
+  var amb  = new THREE.AmbientLight(0xffffff, 0.3);
+  var pt1  = new THREE.PointLight(0xe8384f, 2, 60);
+  var pt2  = new THREE.PointLight(0xf97316, 1.5, 50);
+  pt1.position.set(-15, 10, 10);
+  pt2.position.set(15, -10, 8);
+  scene.add(amb, pt1, pt2);
+
+  // ── MOUSE ──
+  var mouse = { x: 0, y: 0 };
+  document.addEventListener('mousemove', function(e) {
+    mouse.x = (e.clientX / window.innerWidth  - 0.5) * 2;
+    mouse.y = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  // ── RESIZE ──
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ── ANIMATE ──
+  var clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    var t = clock.getElapsedTime();
+
+    // rotate particles slowly
+    particles.rotation.y = t * 0.025;
+    particles.rotation.x = t * 0.012;
+
+    // shapes
+    sphere1.rotation.y = t * 0.3;
+    sphere2.rotation.y = -t * 0.2;
+    ico1.rotation.x = t * 0.4; ico1.rotation.y = t * 0.3;
+    ico2.rotation.x = -t * 0.35; ico2.rotation.z = t * 0.25;
+    torus1.rotation.x = t * 0.2; torus1.rotation.z = t * 0.15;
+    torus2.rotation.y = t * 0.3;
+
+    // float shapes
+    sphere1.position.y = 10  + Math.sin(t * 0.5) * 1.5;
+    sphere2.position.y = -8  + Math.cos(t * 0.4) * 1.2;
+    ico1.position.y    = -12 + Math.sin(t * 0.6) * 1.8;
+    ico2.position.y    = 14  + Math.cos(t * 0.5) * 1.4;
+
+    // camera follows mouse gently
+    camera.position.x += (mouse.x * 4 - camera.position.x) * 0.04;
+    camera.position.y += (-mouse.y * 3 - camera.position.y) * 0.04;
+    camera.lookAt(scene.position);
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+// ══════════════════════════════════════
+//  CARD 3D TILT ON MOUSE
+// ══════════════════════════════════════
+(function() {
+  var card = document.getElementById('card3d');
+  var wrap = document.getElementById('cardWrap');
+
+  document.addEventListener('mousemove', function(e) {
+    var rect = card.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top  + rect.height / 2;
+    var dx = (e.clientX - cx) / (window.innerWidth  / 2);
+    var dy = (e.clientY - cy) / (window.innerHeight / 2);
+
+    var rotY =  dx * 10;
+    var rotX = -dy * 8;
+
+    card.style.transform = 'rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) translateZ(10px)';
+    card.style.boxShadow =
+      '0 2px 0 rgba(255,255,255,0.06) inset,' +
+      '0 -1px 0 rgba(0,0,0,0.4) inset,' +
+      (24 + rotY * 0.5) + 'px ' + (50 + Math.abs(rotX) * 2) + 'px 80px rgba(0,0,0,0.7),' +
+      '0 0 0 1px rgba(255,255,255,0.04),' +
+      '0 0 ' + (60 + Math.abs(dx) * 30) + 'px rgba(232,56,79,' + (0.08 + Math.abs(dx) * 0.06) + ')';
+  });
+
+  document.addEventListener('mouseleave', function() {
+    card.style.transform = 'rotateX(0deg) rotateY(0deg) translateZ(0px)';
+  });
+})();
+
+// ══════════════════════════════════════
+//  FORM LOGIC
+// ══════════════════════════════════════
+(function () {
+  'use strict';
+
+  var tabLogin     = document.getElementById('tabLogin');
+  var tabRegister  = document.getElementById('tabRegister');
+  var secLogin     = document.getElementById('sectionLogin');
+  var secReg       = document.getElementById('sectionRegister');
+  var linkToReg    = document.getElementById('linkToRegister');
+  var linkToLogin  = document.getElementById('linkToLogin');
+  var formLogin    = document.getElementById('formLogin');
+  var formRegister = document.getElementById('formRegister');
+  var regPw        = document.getElementById('regPw');
+  var regPw2       = document.getElementById('regPw2');
+  var strengthText = document.getElementById('strengthText');
+  var matchText    = document.getElementById('matchText');
+  var segs         = ['seg1','seg2','seg3','seg4'].map(function(id){ return document.getElementById(id); });
+
+  function showLogin() {
+    secLogin.classList.add('active'); secReg.classList.remove('active');
+    tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+  }
+  function showRegister() {
+    secReg.classList.add('active'); secLogin.classList.remove('active');
+    tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+  }
+
+  tabLogin.addEventListener('click', showLogin);
+  tabRegister.addEventListener('click', showRegister);
+  linkToReg.addEventListener('click', function(e){ e.preventDefault(); showRegister(); });
+  linkToLogin.addEventListener('click', function(e){ e.preventDefault(); showLogin(); });
+
+  var eyeOpen   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeClosed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22"/></svg>';
+
+  document.querySelectorAll('.toggle-pw').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var inp = document.getElementById(btn.getAttribute('data-target'));
+      var hidden = inp.type === 'password';
+      inp.type = hidden ? 'text' : 'password';
+      btn.innerHTML = hidden ? eyeClosed : eyeOpen;
+    });
+  });
+
+  function getStrength(pw) {
+    var s = 0;
+    if (pw.length >= 8) s++; if (pw.length >= 12) s++;
+    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++;
+    if (/[0-9]/.test(pw)) s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    return Math.min(s, 4);
+  }
+  var labels  = ['','Weak','Fair','Good','Strong'];
+  var classes = ['','weak','medium','medium','strong'];
+
+  function updateStrength() {
+    var score = getStrength(regPw.value);
+    segs.forEach(function(seg, i) {
+      seg.className = 'strength-seg';
+      if (regPw.value.length > 0 && i < score) seg.classList.add(classes[score]);
+    });
+    strengthText.textContent = regPw.value.length > 0 ? 'Strength: ' + labels[score] : '';
+    updateMatch();
+  }
+  function updateMatch() {
+    if (!regPw2.value) { matchText.textContent = ''; return; }
+    if (regPw.value === regPw2.value) {
+      matchText.style.color = '#22c55e'; matchText.textContent = '✓ Passwords match';
+    } else {
+      matchText.style.color = '#e8384f'; matchText.textContent = '✗ Passwords do not match';
+    }
+  }
+
+  regPw.addEventListener('input', updateStrength);
+  regPw2.addEventListener('input', function() { regPw2.style.borderColor=''; regPw2.style.boxShadow=''; updateMatch(); });
+
+  formLogin.addEventListener('submit', function() { document.getElementById('btnLogin').classList.add('loading'); });
+  formRegister.addEventListener('submit', function(e) {
+    if (regPw.value !== regPw2.value) {
+      e.preventDefault();
+      regPw2.style.borderColor = '#e8384f';
+      regPw2.style.boxShadow = '0 0 0 3px rgba(232,56,79,0.28)';
+      matchText.style.color = '#e8384f';
+      matchText.textContent = '✗ Passwords do not match';
+      regPw2.focus(); return;
+    }
+    document.getElementById('btnRegister').classList.add('loading');
+  });
+})();
+</script>
+</body>
+</html>
