@@ -47,7 +47,7 @@ MAX_WORDS_BEFORE_CHUNK = 2500
 CHUNK_SIZE             = 1500
 
 # ── GROQ ──────────────────────────────────────────────────────────────────────
-API_KEY  = "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"
+API_KEY  = ""
 MODEL_ID = "llama-3.1-8b-instant"
 
 def get_client():
