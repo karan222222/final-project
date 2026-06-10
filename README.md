@@ -58,9 +58,35 @@ Smart Notes is an intelligent study platform designed to help students learn fas
 Smart Notes
 │
 ├── app.py
+├── .gitignore
+│
 ├── templates/
+│   ├── dashboard.html
+│   ├── flashcards.html
+│   ├── history.html
+│   ├── history_detail.html
+│   ├── home.html
+│   ├── layout.html
+│   ├── login.html
+│   ├── planner.html
+│   ├── questions.html
+│   ├── register.html
+│   ├── summary.html
+│   ├── upload.html
+│   ├── voice.html
+│   └── youtube.html
+│
 ├── static/
+│   ├── css/
+│   ├── js/
+│   ├── audio/
+│   ├── assets/
+│   ├── background.png
+│   ├── homepage.png
+│   └── logo.png.png
+│
 ├── uploads/
+│
 ├── database.db
 ├── history.db
 └── smart_notes.db
